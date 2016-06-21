@@ -52,6 +52,7 @@ import com.ibm.watson.developer_cloud.text_to_speech.v1.util.WaveUtils;
 public class TextToSpeechIT extends WatsonServiceTest {
 
   private TextToSpeech service;
+  private String voiceName;
 
   /*
    * (non-Javadoc)
@@ -68,6 +69,7 @@ public class TextToSpeechIT extends WatsonServiceTest {
         getExistingProperty("text_to_speech.password"));
     service.setEndPoint(getExistingProperty("text_to_speech.url"));
     service.setDefaultHeaders(getDefaultHeaders());
+    voiceName = getExistingProperty("text_to_speech.voice_name");
   }
 
 
@@ -88,6 +90,20 @@ public class TextToSpeechIT extends WatsonServiceTest {
   }
 
   /**
+   * Test get voice.
+   */
+  @Test
+  public void testGetVoice() {
+    Voice voice = service.getVoice(voiceName).execute();
+    Assert.assertNotNull(voice);
+    Assert.assertNotNull(voice.getDescription());
+    Assert.assertNotNull(voice.getGender());
+    Assert.assertNotNull(voice.getLanguage());
+    Assert.assertNotNull(voice.getName());
+    Assert.assertNotNull(voice.getUrl());
+  }
+
+  /**
    * Synthesize text and write it to a temporary file.
    *
    * @throws IOException Signals that an I/O exception has occurred.
@@ -100,9 +116,7 @@ public class TextToSpeechIT extends WatsonServiceTest {
   }
 
   /**
-   *  Test word pronunciation
-   *
-   * @throws IOException Signals that an I/O exception has occurred.
+   *  Test word pronunciation.
    */
   @Test
   public void testGetWordPronunciation(){

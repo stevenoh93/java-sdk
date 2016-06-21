@@ -13,8 +13,10 @@
  */
 package com.ibm.watson.developer_cloud.text_to_speech.v1;
 
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,8 +25,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 
@@ -36,27 +38,34 @@ import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
-import org.mockserver.model.Header;
-import org.mockserver.model.Parameter;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
+import com.google.gson.Gson;
 import com.ibm.watson.developer_cloud.WatsonServiceUnitTest;
 import com.ibm.watson.developer_cloud.http.HttpMediaType;
 import com.ibm.watson.developer_cloud.text_to_speech.v1.model.AudioFormat;
 import com.ibm.watson.developer_cloud.text_to_speech.v1.model.Voice;
 import com.ibm.watson.developer_cloud.text_to_speech.v1.util.WaveUtils;
 import com.ibm.watson.developer_cloud.util.GsonSingleton;
+import com.ibm.watson.developer_cloud.util.TestUtils;
 
-import io.netty.handler.codec.http.HttpHeaders;
+import okhttp3.HttpUrl;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.RecordedRequest;
+import okio.Buffer;
 
 /**
  * The Class TextToSpeechTest.
  */
 @FixMethodOrder(MethodSorters.JVM)
 public class TextToSpeechTest extends WatsonServiceUnitTest {
+	
+  private static final Gson GSON = GsonSingleton.getGsonWithoutPrettyPrinting();
   private final static String GET_VOICES_PATH = "/v1/voices";
   private final static String SYNTHESIZE_PATH = "/v1/synthesize";
-
+  
   /**
    * Write input stream to output stream.
    * 
@@ -101,21 +110,19 @@ public class TextToSpeechTest extends WatsonServiceUnitTest {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-
+    
     service = new TextToSpeech();
     service.setApiKey("");
-    service.setEndPoint(MOCK_SERVER_URL);
-
+    service.setEndPoint(getMockWebServerUrl());
   }
 
   /**
    * Test get voices.
+   *
+   * @throws InterruptedException the interrupted exception
    */
   @Test
-  public void testGetVoices() {
-
-    final Map<String, Object> response = new HashMap<String, Object>();
-    final List<Voice> voices = new ArrayList<Voice>();
+  public void testGetVoices() throws InterruptedException {
     final Voice voice = new Voice();
     voice.setUrl("http://ibm.watson.com/text-to-speech/voices/en-US_TestMaleVoice");
     voice.setName("en-US_TestMaleVoice");
@@ -130,51 +137,76 @@ public class TextToSpeechTest extends WatsonServiceUnitTest {
     voice1.setLanguage("en-US");
     voice1.setDescription("TestFemale");
 
-    voices.add(voice);
-    voices.add(voice1);
+    final List<Voice> voices = ImmutableList.of(voice, voice1);
+    final Map<String, ?> response = ImmutableMap.of("voices", voices);
 
-    response.put("voices", voices);
-
-    mockServer.when(request().withPath(GET_VOICES_PATH)).respond(
-        response().withHeaders(
-            new Header(HttpHeaders.Names.CONTENT_TYPE, HttpMediaType.APPLICATION_JSON)).withBody(
-            GsonSingleton.getGsonWithoutPrettyPrinting().toJson(response)));
+    server.enqueue(new MockResponse()
+        .addHeader(CONTENT_TYPE, HttpMediaType.APPLICATION_JSON)
+        .setBody(GSON.toJson(response)));
 
     final List<Voice> result = service.getVoices().execute();
-    Assert.assertNotNull(result);
-    Assert.assertFalse(result.isEmpty());
-    Assert.assertEquals(result, voices);
+    final RecordedRequest request = server.takeRequest();
+    
+    assertEquals(GET_VOICES_PATH, request.getPath());
+    assertNotNull(result);
+    assertFalse(result.isEmpty());
+    assertEquals(voices, result);
+  }
+
+  /**
+   * Test get voice.
+   */
+  @Test
+  public void testGetVoice() {
+    final Voice voice = new Voice();
+    voice.setUrl("http://ibm.watson.com/text-to-speech/voices/en-US_TestMaleVoice");
+    voice.setName("en-US_TestMaleVoice");
+    voice.setGender("male");
+    voice.setLanguage("en-US");
+    voice.setDescription("TestMale");
+
+    server.enqueue(new MockResponse()
+        .addHeader(CONTENT_TYPE, HttpMediaType.APPLICATION_JSON)
+        .setBody(GSON.toJson(voice)));
+
+    Voice result = service.getVoice(voice.getName()).execute();
+    assertNotNull(result);
+    assertEquals(result, voice);
+
+    try {
+      TestUtils.assertNoExceptionsOnGetters(result);
+    } catch (final Exception e) {
+      Assert.fail(e.getMessage());
+    }
   }
 
   /**
    * Test synthesize.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @throws InterruptedException the interrupted exception
    */
+  @SuppressWarnings("resource")
   @Test
-  public void testSynthesize() {
+  public void testSynthesize() throws IOException, InterruptedException {
     final File audio = new File("src/test/resources/speech_to_text/sample1.wav");
+    final Buffer buffer = new Buffer().write(Files.toByteArray(audio));
 
-    try {
-      final List<Parameter> parameters = new ArrayList<Parameter>();
-      parameters.add(new Parameter("text", text));
-      parameters.add(new Parameter("voice", Voice.EN_LISA.getName()));
-      parameters.add(new Parameter("accept", HttpMediaType.AUDIO_WAV));
+    server.enqueue(new MockResponse()
+        .addHeader(CONTENT_TYPE, HttpMediaType.AUDIO_WAV)
+        .setBody(buffer));
 
-      mockServer.when(request().withQueryStringParameters(parameters).withPath(SYNTHESIZE_PATH))
-          .respond(
-              response().withHeaders(
-                  new Header(HttpHeaders.Names.CONTENT_TYPE, HttpMediaType.AUDIO_WAV)).withBody(
-                  Files.toByteArray(audio)));
+    final InputStream in = service.synthesize(text, Voice.EN_LISA, AudioFormat.WAV).execute();
+    final RecordedRequest request = server.takeRequest();
+    final HttpUrl requestUrl = HttpUrl.parse("http://www.example.com" + request.getPath());
 
-      final InputStream in = service.synthesize(text, Voice.EN_LISA, AudioFormat.WAV).execute();
-      Assert.assertNotNull(in);
+    assertEquals(SYNTHESIZE_PATH, requestUrl.encodedPath());
+    assertEquals(text, requestUrl.queryParameter("text"));
+    assertEquals(Voice.EN_LISA.getName(), requestUrl.queryParameter("voice"));
+    assertEquals(HttpMediaType.AUDIO_WAV, requestUrl.queryParameter("accept"));
+    assertNotNull(in);
 
-      writeInputStreamToOutputStream(in, new FileOutputStream("target/output.wav"));
-
-    } catch (final FileNotFoundException e) {
-      Assert.fail(e.getMessage());
-    } catch (final IOException e) {
-      Assert.fail(e.getMessage());
-    }
+    writeInputStreamToOutputStream(in, new FileOutputStream("target/output.wav"));
   }
 
 
@@ -211,6 +243,35 @@ public class TextToSpeechTest extends WatsonServiceUnitTest {
     File tempFile = File.createTempFile("output", ".wav");
     writeInputStreamToFile(stream, tempFile);
     Assert.assertNotNull(AudioSystem.getAudioFileFormat(tempFile));
+  }
+
+  /**
+   * Tests the static method Voice.getByName
+   *
+   * @throws IllegalAccessException the illegal access exception
+   */
+  @Test
+  public void testVoiceClass() throws IllegalAccessException {
+    Field[] fields = Voice.class.getDeclaredFields();
+    int count = 0;
+
+    for(Field field : fields) {
+      boolean isVoice = field.getType().isAssignableFrom(Voice.class);
+      boolean isDeprecated = field.getAnnotation(Deprecated.class) != null;
+
+      if(Modifier.isStatic(field.getModifiers()) && isVoice && ! isDeprecated) {
+        Voice voice = (Voice) field.get(null);
+
+        Assert.assertEquals(voice, Voice.getByName(voice.getName()));
+        count++;
+      }
+    }
+
+    Assert.assertTrue(count > 0);
+    Assert.assertEquals(Voice.ALL.size(), count);
+    Assert.assertNull(Voice.getByName("not existing"));
+    Assert.assertNull(Voice.getByName(null));
+    Assert.assertEquals(Voice.EN_ALLISON, Voice.getByName("en-US_AllisonVoice"));
   }
 
 }

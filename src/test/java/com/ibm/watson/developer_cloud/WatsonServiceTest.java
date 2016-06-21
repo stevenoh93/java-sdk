@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,8 @@ public abstract class WatsonServiceTest {
   private static final String DEFAULT_PROPERTIES = "config.properties";
   private static final String LOCAL_PROPERTIES = ".config.properties";
   private static final Logger LOG = Logger.getLogger(WatsonServiceTest.class.getName());
+
+  protected static final String CONTENT_TYPE = "Content-Type";
 
   /**
    * Instantiates a new watson service test.
@@ -182,9 +185,9 @@ public abstract class WatsonServiceTest {
   private void loadProperties() {
     PROPERTIES = new Properties();
 
-    InputStream input = WatsonServiceTest.class.getClassLoader().getResourceAsStream(LOCAL_PROPERTIES);
+    InputStream input = Thread.currentThread().getContextClassLoader().getResourceAsStream(LOCAL_PROPERTIES);
     if (input == null) {
-      input = WatsonServiceTest.class.getClassLoader().getResourceAsStream(DEFAULT_PROPERTIES);
+      input = Thread.currentThread().getContextClassLoader().getResourceAsStream(DEFAULT_PROPERTIES);
     } else {
       LOG.info("Using " + LOCAL_PROPERTIES);
     }
@@ -204,10 +207,15 @@ public abstract class WatsonServiceTest {
    * Setup logging.
    */
   private void setupLogging() {
-    // set logging level
-    ch.qos.logback.classic.Logger root =
-        (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+    ch.qos.logback.classic.Logger root = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
     root.setLevel(ch.qos.logback.classic.Level.OFF);
+    try {
+      FileInputStream configFile = new FileInputStream("src/test/resources/logging.properties");
+      LogManager.getLogManager().readConfiguration(configFile);
+    } catch (IOException ex) {
+      System.out.println("WARNING: Could not open configuration file");
+      System.out.println("WARNING: Logging not configured (console output only)");
+    }
   }
 
   /**

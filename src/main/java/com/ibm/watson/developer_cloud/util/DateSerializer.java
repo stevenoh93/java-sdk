@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
@@ -26,7 +27,9 @@ import com.google.gson.JsonSerializer;
  * Date serializer.
  */
 public class DateSerializer implements JsonSerializer<Date> {
-  private static final String DATE_FORMAT_UTC = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+
+  // SimpleDateFormat is NOT thread safe - they require private visibility and synchronized access
+  private final SimpleDateFormat utc = new SimpleDateFormat(DateDeserializer.DATE_UTC);
 
   /*
    * (non-Javadoc)
@@ -35,8 +38,8 @@ public class DateSerializer implements JsonSerializer<Date> {
    * com.google.gson.JsonSerializationContext)
    */
   @Override
-  public JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext context) {
-    SimpleDateFormat sdf = new SimpleDateFormat(DATE_FORMAT_UTC);
-    return src == null ? null : new JsonPrimitive(sdf.format(src));
+  // DateSerializer.serialize() is NOT thread safe because of the underlying SimpleDateFormats.
+  public synchronized JsonElement serialize(Date src, Type typeOfSrc, JsonSerializationContext context) {
+    return src == null ? JsonNull.INSTANCE : new JsonPrimitive(utc.format(src));
   }
 }

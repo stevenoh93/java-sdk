@@ -1,15 +1,16 @@
+
 # Watson Developer Cloud Java SDK
 [![Build Status](https://travis-ci.org/watson-developer-cloud/java-sdk.svg?branch=master)](https://travis-ci.org/watson-developer-cloud/java-sdk)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.ibm.watson.developer_cloud/java-sdk/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.ibm.watson.developer_cloud/java-sdk)
 [![codecov.io](https://codecov.io/github/watson-developer-cloud/java-sdk/coverage.svg?branch=master)](https://codecov.io/github/watson-developer-cloud/java-sdk?branch=master)
 [![CLA assistant](https://cla-assistant.io/readme/badge/watson-developer-cloud/java-sdk)](https://cla-assistant.io/watson-developer-cloud/java-sdk)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1fdb12900d5845459033784aba3a7300)](https://www.codacy.com/app/gattana/java-sdk?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=watson-developer-cloud/java-sdk&amp;utm_campaign=Badge_Grade)
 
-
-Java client library to use the [Watson Developer Cloud][wdc] services, a collection of REST
+The Java SDK uses the [Watson Developer Cloud][wdc] services, a collection of REST
 APIs and SDKs that use cognitive computing to solve complex problems.
 
-
 ## Table of Contents
+  * [Reactive API call for v3.0.1](#introduce-reactive-api-call-for-v301)
   * [Breaking Changes for v3.0](#breaking-changes-for-v30)
   * [Installation](#installation)
     * [Maven](#maven)
@@ -22,6 +23,7 @@ APIs and SDKs that use cognitive computing to solve complex problems.
     * [Alchemy Vision](#alchemy-vision)
     * [Alchemy Data News](#alchemy-data-news)
     * [Concept Insights](#concept-insights)
+    * [Conversation](#conversation)
     * [Dialog](#dialog)
     * [Document Conversion](#document-conversion)
     * [Language Translation](#language-translation)
@@ -33,7 +35,6 @@ APIs and SDKs that use cognitive computing to solve complex problems.
     * [Text to Speech](#text-to-speech)
     * [Tone Analyzer](#tone-analyzer)
     * [Tradeoff Analytics](#tradeoff-analytics)
-    * [Visual Insights](#visual-insights)
     * [Visual Recognition](#visual-recognition)
   * [Android](#android)
   * [Running in Bluemix](#running-in-bluemix)
@@ -41,24 +42,62 @@ APIs and SDKs that use cognitive computing to solve complex problems.
   * [License](#license)
   * [Contributing](#contributing)
 
+## Introduce reactive API call for v3.0.1  
+
+To do a reactive call, you need to add `rx()`.  With reactive you can use synchronous or asynchronous calls as you like, and you can combine multiple rest calls more efficiently.
+
+Use callback way
+```java
+service.getDialogs().rx().thenApply(new CompletableFuture.Fun<List<Dialog>, Integer>() {
+  @Override
+  public Integer apply(List<Dialog> dialogs) {
+    return dialogs.size();
+  }
+}).thenAccept(new CompletableFuture.Action<Integer>() {
+  @Override
+  public void accept(Integer integer) {
+    System.out.println(integer);
+  }
+});    
+```
+Use asynchronous callback way
+```java
+service.getDialogs().rx().thenApplyAsync(new CompletableFuture.Fun<List<Dialog>, Integer>() {
+  @Override
+  public Integer apply(List<Dialog> dialogs) {
+    return dialogs.size();
+  }
+}).thenAccept(new CompletableFuture.Action<Integer>() {
+  @Override
+  public void accept(Integer size) {
+    System.out.println(size);
+  }
+});
+```
+Use synchronous way
+```java
+Integer size=service.getDialogs().rx().get().size();
+System.out.println(size);
+```
+
 ## Breaking Changes for v3.0
 
-The version 3.0.0-RC1 is a major release focused on simplicity and consistency. Several breaking changes were introduced.
+The version 3.0 is a major release focused on simplicity and consistency. Several breaking changes were introduced.
 
-### Synchronous vs Asynchronous
+### Synchronous vs. Asynchronous
 
-Before 3.0 all the API calls were synchronous
+Before 3.0 all the API calls were synchronous.
 ```java
 List<Dialog> dialogs = dialogService.getDialogs();
 System.out.println(dialogs);
 ```
-Now to do synchronous call you need to add `execute()`
+To do a synchronous call, you need to add `execute()`.
 
 ```java
 List<Dialog> dialogs = dialogService.getDialogs().execute();
 System.out.println(dialogs);
 ```
-To do asynchronous calls you need to specify a callback
+To do an asynchronous call, you need to specify a callback.
 
 ```java
 service.getDialogs().enqueue(new ServiceCallback<List<Dialog>>() {
@@ -83,7 +122,7 @@ For example if you previously had
 List<Dialog> dialogs = dialogService.getDialogs();
 System.out.println(dialogs);
 ```
-Just add `execute()` on the end and your code will work exactly the same as before.
+Just add `execute()` on the end, and your code will work exactly the same as before.
 
 ```java
 List<Dialog> dialogs = dialogService.getDialogs().execute();
@@ -97,20 +136,24 @@ System.out.println(dialogs);
 <dependency>
 	<groupId>com.ibm.watson.developer_cloud</groupId>
 	<artifactId>java-sdk</artifactId>
-	<version>3.0.0-RC1</version>
+	<version>3.0.1</version>
 </dependency>
 ```
 ##### Gradle
 
 ```gradle
-'com.ibm.watson.developer_cloud:java-sdk:3.0.0-RC1'
+'com.ibm.watson.developer_cloud:java-sdk:3.0.1'
 ```
+
+Snapshots of the development version are available in [Sonatype's snapshots repository][sonatype_snapshots].
+
 
 ##### JAR
 
 Download the jar with dependencies [here][jar].
 
 Now, you are ready to see some [examples](https://github.com/watson-developer-cloud/java-sdk/tree/master/examples/java/com/ibm/watson/developer_cloud).
+
 
 ## Usage
 
@@ -139,7 +182,7 @@ Once you have credentials, copy config.properties.example to src/test/resources/
 
 ## Questions
 
-If you are having difficulties using the APIs or have a question about the IBM
+If you are having difficulties using the APIs or you have a question about the IBM
 Watson Services, please ask a question on
 [dW Answers](https://developer.ibm.com/answers/questions/ask/?topics=watson)
 or [Stack Overflow](http://stackoverflow.com/questions/ask?tags=ibm-watson).
@@ -205,6 +248,18 @@ params.put(AlchemyDataNews.COUNT, 7);
 DocumentsResult result = service.getNewsDocuments(params).execute();
 
 System.out.println(result);
+```
+
+### Conversation
+Use the experimental [Conversation][conversation] service to identify intents, entities, and conduct conversations.
+
+```java
+ConversationService service = new ConversationService(ConversationService.VERSION_DATE_2016_05_19);
+service.setUsernameAndPassword("<username>", "<password>");
+
+MessageRequest newMessage = new MessageRequest.Builder().inputText("Hi").build();
+MessageResponse response = service.message("<workspace-id>", newMessage).execute();
+System.out.println(response);
 ```
 
 ### Concept Insights
@@ -329,7 +384,7 @@ System.out.println(response);
 ### Retrieve and Rank
 The [Retrieve and Rank][retrieve_and_rank] service helps users find the most
 relevant information for their query by using a  combination of search and
-machine learning to find “signals” in the data.
+machine learning to find "signals" in the data.
 
 
 ```java
@@ -410,7 +465,7 @@ System.out.println(voices);
 Use the [Tone Analyzer][tone_analyzer] service to get the tone of your email.
 
 ```java
-ToneAnalyzer service = new ToneAnalyzer(ToneAnalyzer.VERSION_DATE_2016_02_11);
+ToneAnalyzer service = new ToneAnalyzer(ToneAnalyzer.VERSION_DATE_2016_05_19);
 service.setUsernameAndPassword("<username>", "<password>");
 
 String text =
@@ -426,7 +481,7 @@ String text =
       + "business outcomes. Economy has nothing to do with it.";
 
 // Call the service and get the tone
-ToneAnalysis tone = service.getTone(text).execute();
+ToneAnalysis tone = service.getTone(text, null).execute();
 System.out.println(tone);
 ```
 
@@ -480,19 +535,6 @@ Dilemma dilemma = service.dilemmas(problem).execute();
 System.out.println(dilemma);
 ```
 
-### Visual Insights
-Use the [Visual Insights][visual_insights] to get insight into the themes present in a collection of images based on their visual appearance/content.
-
-```java
-VisualInsights service = new VisualInsights();
-service.setUsernameAndPassword("<username>", "<password>");
-
-File images = new File("src/test/resources/visual_insights/images.zip");
-Summary summary = service.getSummary(images).execute();
-
-System.out.println(summary);
-```
-
 ### Visual Recognition
 Use the [Visual Recognition][visual_recognition] service to recognize the
 following picture.
@@ -500,12 +542,14 @@ following picture.
 ![Car](https://visual-recognition-demo.mybluemix.net/images/samples/5.jpg)
 
 ```java
-VisualRecognition service = new VisualRecognition(VisualRecognition.VERSION_DATE_2015_12_02);
-service.setUsernameAndPassword("<username>", "<password>");
+VisualRecognition service = new VisualRecognition(VisualRecognition.VERSION_DATE_2016_05_19);
+service.setApiKey("<api-key>");
 
-File image = new File("src/test/resources/visual_recognition/car.png");
-
-VisualClassification result = service.classify(image).execute();
+System.out.println("Classify an image");
+ClassifyImagesOptions options = new ClassifyImagesOptions.Builder()
+    .images(new File("src/test/resources/visual_recognition/car.png"))
+    .build();
+VisualClassification result = service.classify(options).execute();
 System.out.println(result);
 ```
 
@@ -532,7 +576,7 @@ Gradle:
 
   ```sh
   $ cd java-sdk
-  $ gradle jar  # build jar file (build/libs/watson-developer-cloud-3.0.0-RC1.jar)
+  $ gradle jar  # build jar file (build/libs/watson-developer-cloud-3.0.1.jar)
   $ gradle test # run tests
   ```
 
@@ -573,8 +617,6 @@ available in [LICENSE](LICENSE).
 See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 [personality_insights]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/personality-insights/
-[language_identification]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/lidapi/
-[machine_translation]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/mtapi/
 [document_conversion]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/document-conversion/
 [relationship_extraction]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/sireapi/
 [language_translation]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/language-translation/
@@ -585,9 +627,8 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 [tone_analyzer]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/tone-analyzer/
 [dialog]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/dialog/
 [concept_insights]: https://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/concept-insights/
-[visual_insights]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/visual-insights/
+[conversation]: https://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/conversation/
 [retrieve_and_rank]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/retrieve-rank/
-[concept_expansion]: http://www.ibm.com/smarterplanet/us/en/ibmwatson/developercloud/doc/concept-expansion/
 
 [alchemy_language]: http://www.alchemyapi.com/products/alchemylanguage
 [sentiment_analysis]: http://www.alchemyapi.com/products/alchemylanguage/sentiment-analysis
@@ -600,6 +641,6 @@ See [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 [OkHttp]: http://square.github.io/okhttp/
 [gson]: https://github.com/google/gson
 [apache_maven]: http://maven.apache.org/
-[releases]: https://github.com/watson-developer-cloud/java-sdk/releases
+[sonatype_snapshots]: https://oss.sonatype.org/content/repositories/snapshots/com/ibm/watson/developer_cloud/java-sdk/
 
-[jar]: https://github.com/watson-developer-cloud/java-sdk/releases/download/java-sdk-3.0.0-RC1/java-sdk-3.0.0-RC1-jar-with-dependencies.jar
+[jar]: https://github.com/watson-developer-cloud/java-sdk/releases/download/java-sdk-3.0.1/java-sdk-3.0.1-jar-with-dependencies.jar

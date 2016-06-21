@@ -13,12 +13,18 @@
  */
 package com.ibm.watson.developer_cloud.util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import org.apache.commons.lang3.ArrayUtils;
+import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.ibm.watson.developer_cloud.service.WatsonService;
 
@@ -29,7 +35,7 @@ import okhttp3.Request;
  * {@link com.ibm.watson.developer_cloud.http.RequestBuilder }
  * 
  */
-public class RequestUtils {
+public final class RequestUtils {
 
   /**
    * Default end point for relative request. It will be updated by {@link WatsonService} with the
@@ -37,10 +43,19 @@ public class RequestUtils {
    */
   public static final String DEFAULT_ENDPOINT = "http://do.not.use";
 
+  private static final Logger LOG = Logger.getLogger(RequestUtils.class.getName());
+
+  private static final String[] properties =
+      new String[] {"java.vendor", "java.version", "os.arch", "os.name", "os.version"};
+  private static String userAgent;
+
+  private RequestUtils() {
+    // This is a utility class - no instantiation allowed.
+  }
 
   /**
-   * Encode a string into a valid URL string
-   * 
+   * Encode a string into a valid URL string.
+   *
    * @param content the content
    * @return the string
    */
@@ -48,7 +63,7 @@ public class RequestUtils {
     try {
       return URLEncoder.encode(content, "UTF-8");
     } catch (final UnsupportedEncodingException e) {
-      return null;
+      throw new AssertionError(e);
     }
   }
 
@@ -67,44 +82,38 @@ public class RequestUtils {
    * 
    * @param params the parameters
    * @param toOmit the keys to omit
-   * @return the map with the omitted key-value pars
+   * @return the map with the omitted key-value pars, or null if params is null
    */
   public static Map<String, Object> omit(Map<String, Object> params, String... toOmit) {
     if (params == null)
       return null;
-    if (toOmit == null || toOmit.length == 0)
-      return params;
 
-    final Map<String, Object> ret = new HashMap<String, Object>();
+    final Map<String, Object> ret = new HashMap<String, Object>(params);
 
-    for (final String key : params.keySet()) {
-      if (!ArrayUtils.contains(toOmit, key))
-        ret.put(key, params.get(key));
-    }
+    if (toOmit != null)
+      ret.keySet().removeAll(Arrays.asList(toOmit));
+
     return ret;
   }
 
 
   /**
    * Return a copy of a {@link Map} with only the specified given key, or array of keys.
-   * 
+   * If {@code toPick} is empty all keys will remain in the Map.
+   *
    * @param params the parameters
    * @param toPick the keys to pick
-   * @return the map with the picked key-value pars
+   * @return the map with the picked key-value pars, or null if params is null
    */
 
   public static Map<String, Object> pick(Map<String, Object> params, String... toPick) {
     if (params == null)
       return null;
-    if (toPick == null || toPick.length == 0)
-      return params;
 
-    final Map<String, Object> ret = new HashMap<String, Object>();
+    final Map<String, Object> ret = new HashMap<String, Object>(params);
 
-    for (final String key : params.keySet()) {
-      if (ArrayUtils.contains(toPick, key))
-        ret.put(key, params.get(key));
-    }
+    if (toPick != null && toPick.length > 0)
+      ret.keySet().retainAll(Arrays.asList(toPick));
 
     return ret;
   }
@@ -119,4 +128,82 @@ public class RequestUtils {
   public static String replaceEndPoint(String url, String endPoint) {
     return endPoint + url.replaceFirst(DEFAULT_ENDPOINT, "");
   }
+
+  /**
+   * Creates a String of all elements of an array, separated by a separator.
+   *
+   * @param array the array
+   * @param separator the separator
+   * @return the joined String
+   */
+  public static <T> String join(T[] array, String separator) {
+    return join(Arrays.asList(array), separator);
+  }
+
+  /**
+   * Creates a String of all elements of an iterable, separated by a separator.
+   *
+   * @param iterable the iterable
+   * @param separator the separator
+   * @return the joined String
+   */
+  public static String join(Iterable<?> iterable, String separator) {
+    final StringBuilder sb = new StringBuilder();
+    boolean first = true;
+
+    for (Object item : iterable) {
+      if (first)
+        first = false;
+      else
+        sb.append(separator);
+
+      sb.append(item.toString());
+    }
+
+    return sb.toString();
+  }
+
+  /**
+   * Gets the user agent.
+   *
+   * @return the user agent
+   */
+  public static synchronized String getUserAgent() {
+    if (userAgent == null) {
+      userAgent = buildUserAgent();
+    }
+    return userAgent;
+  }
+
+  private static String loadSdkVersion() {
+    InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("version.properties");
+    Properties properties = new Properties();
+
+    try {
+      properties.load(inputStream);
+    } catch (IOException e) {
+      LOG.log(Level.WARNING, "Could not load version.properties", e);
+    }
+
+    return properties.getProperty("version", "unknown-version");
+  }
+
+  public static void main(String[] args) {
+    System.out.println(getUserAgent());
+  }
+
+  /**
+   * Builds the user agent using System properties
+   *
+   * @return the string that represents the user agent
+   */
+  private static String buildUserAgent() {
+    final List<String> details = new ArrayList<String>();
+    for (String propertyName : properties) {
+      details.add(propertyName + "=" + System.getProperty(propertyName));
+    }
+
+    return "watson-apis-java-sdk/" + loadSdkVersion() + " (" + RequestUtils.join(details, "; ") + ")";
+  }
+
 }

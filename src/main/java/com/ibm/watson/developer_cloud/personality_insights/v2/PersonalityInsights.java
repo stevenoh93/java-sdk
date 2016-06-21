@@ -13,10 +13,6 @@
  */
 package com.ibm.watson.developer_cloud.personality_insights.v2;
 
-import java.util.Date;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.ibm.watson.developer_cloud.http.HttpHeaders;
 import com.ibm.watson.developer_cloud.http.HttpMediaType;
 import com.ibm.watson.developer_cloud.http.RequestBuilder;
@@ -25,8 +21,8 @@ import com.ibm.watson.developer_cloud.personality_insights.v2.model.Content;
 import com.ibm.watson.developer_cloud.personality_insights.v2.model.Profile;
 import com.ibm.watson.developer_cloud.personality_insights.v2.model.ProfileOptions;
 import com.ibm.watson.developer_cloud.service.WatsonService;
+import com.ibm.watson.developer_cloud.util.GsonSingleton;
 import com.ibm.watson.developer_cloud.util.ResponseConverterUtils;
-import com.ibm.watson.developer_cloud.util.TimestampTypeAdapter;
 import com.ibm.watson.developer_cloud.util.Validator;
 
 /**
@@ -44,9 +40,6 @@ public class PersonalityInsights extends WatsonService {
   private static final String PATH_PROFILE = "/v2/profile";
   private static final String INCLUDE_RAW = "include_raw";
   private static final String URL = "https://gateway.watsonplatform.net/personality-insights/api";
-  private static final Gson GSON =
-      new GsonBuilder().registerTypeAdapter(Date.class, new TimestampTypeAdapter()).create();
-
   private static final String HEADERS = "headers";
 
   /**
@@ -55,6 +48,16 @@ public class PersonalityInsights extends WatsonService {
   public PersonalityInsights() {
     super(SERVICE_NAME);
     setEndPoint(URL);
+  }
+
+  /**
+   * Instantiates a new personality insights service by username and password.
+   * @param username the username
+   * @param password the password
+   */
+  public PersonalityInsights(String username, String password) {
+    this();
+    setUsernameAndPassword(username, password);
   }
 
   private RequestBuilder buildProfileRequest(ProfileOptions options) {
@@ -67,11 +70,12 @@ public class PersonalityInsights extends WatsonService {
     final RequestBuilder request = RequestBuilder.post(PATH_PROFILE);
 
     if (options.text() != null) {
+      request.header(HttpHeaders.CONTENT_TYPE, contentType);
       request.bodyContent(options.text(), contentType);
     } else {
       final Content content = new Content();
       content.setContentItems(options.contentItems());
-      String body = GSON.toJson(content);
+      String body = GsonSingleton.getGson().toJson(content);
       request.bodyContent(body, contentType);
     }
 

@@ -13,6 +13,7 @@
  */
 package com.ibm.watson.developer_cloud.alchemy.v1;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import com.ibm.watson.developer_cloud.alchemy.v1.model.DocumentsResult;
@@ -58,25 +59,43 @@ public class AlchemyDataNews extends AlchemyService {
   public static final String TIME_SLICE = "timeSlice";
 
   /**
+   * Instantiates a new alchemy data news service.
+   */
+  public AlchemyDataNews() {
+    super();
+  }
+
+  /**
+   * Instantiates a new alchemy data news service by apiKey.
+   * @param apiKey the api key
+   */
+  public AlchemyDataNews(String apiKey) {
+    super(apiKey);
+  }
+
+  /**
    * Gets the news documents.
    * 
    * @param parameters the parameters
    * @return the news documents
    */
-  public ServiceCall<DocumentsResult> getNewsDocuments(Map<String, Object> parameters) {
+  public ServiceCall<DocumentsResult> getNewsDocuments(final Map<String, Object> parameters) {
     Validator.notNull(parameters.get(START), "start time cannot be null");
     Validator.notNull(parameters.get(END), "end time cannot be null");
     Validator.notNull(parameters.get(RETURN), "return cannot be null");
 
+    // clone parameters, to prevent errors if the user continues to use the provided Map, or it is immutable
+    final Map<String, Object> parametersCopy = new HashMap<String, Object>(parameters);
+
     // Return json
-    parameters.put(OUTPUT_MODE, JSON);
+    parametersCopy.put(OUTPUT_MODE, JSON);
 
     // Prevent jsonp to be returned
-    parameters.remove(JSONP);
+    parametersCopy.remove(JSONP);
 
     final RequestBuilder requestBuilder = RequestBuilder.get(NEWS_END_POINT);
-    for (final String param : parameters.keySet()) {
-      requestBuilder.query(param, parameters.get(param));
+    for (final String param : parametersCopy.keySet()) {
+      requestBuilder.query(param, parametersCopy.get(param));
     }
 
     return createServiceCall(requestBuilder.build(), ResponseConverterUtils.getObject(DocumentsResult.class));

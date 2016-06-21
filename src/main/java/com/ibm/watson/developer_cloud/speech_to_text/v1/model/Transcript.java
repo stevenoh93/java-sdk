@@ -15,18 +15,21 @@
 package com.ibm.watson.developer_cloud.speech_to_text.v1.model;
 
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.annotations.SerializedName;
 import com.ibm.watson.developer_cloud.service.model.GenericModel;
 
 /**
- * Encapsulates a transcription along with the alternatives
+ * Encapsulates a transcription along with the alternatives.
  */
 public class Transcript extends GenericModel {
 
   @SerializedName("final")
   private boolean _final;
   private List<SpeechAlternative> alternatives;
+  @SerializedName("keywords_result")
+  private Map<String, List<KeywordsResult>> keywordsResult;
 
   /**
    * Gets the alternatives.
@@ -62,5 +65,23 @@ public class Transcript extends GenericModel {
    */
   public void setFinal(final boolean finalValue) {
     this._final = finalValue;
+  }
+
+  /**
+   * Gets the keyword spotting results.
+   *
+   * @return the results
+   */
+  public Map<String, List<KeywordsResult>> getKeywordsResult() {
+    return keywordsResult;
+  }
+
+  /**
+   * Sets the keyword spotting results.
+   *
+   * @param keywordsResult the results
+   */
+  public void setKeywordsResult(Map<String, List<KeywordsResult>> keywordsResult) {
+    this.keywordsResult = keywordsResult;
   }
 }

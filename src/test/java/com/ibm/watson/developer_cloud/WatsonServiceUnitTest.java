@@ -13,28 +13,23 @@
  */
 package com.ibm.watson.developer_cloud;
 
-import static org.mockserver.integration.ClientAndServer.startClientAndServer;
+import java.io.IOException;
 
+import org.apache.commons.lang3.StringUtils;
 import org.junit.After;
-import org.mockserver.integration.ClientAndServer;
-import org.mockserver.model.Header;
 
-import com.ibm.watson.developer_cloud.http.HttpHeaders;
+import com.google.gson.Gson;
 import com.ibm.watson.developer_cloud.http.HttpMediaType;
+import com.ibm.watson.developer_cloud.util.GsonSingleton;
+
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
 
 /**
  * Utility class to Mock the Watson Services.
  * 
  */
 public abstract class WatsonServiceUnitTest extends WatsonServiceTest {
-
-  /** The Constant APPLICATION_JSON. */
-  protected static final Header APPLICATION_JSON = new Header(HttpHeaders.CONTENT_TYPE,
-      HttpMediaType.APPLICATION_JSON);
-  
-  /** The Constant TEXT_PLAIN. */
-  protected static final Header TEXT_PLAIN = new Header(HttpHeaders.CONTENT_TYPE,
-      HttpMediaType.TEXT.toString());
 
   /** The Constant DELETE. */
   protected static final String DELETE = "DELETE";
@@ -48,14 +43,10 @@ public abstract class WatsonServiceUnitTest extends WatsonServiceTest {
   /** The Constant PUT. */
   protected static final String PUT = "PUT";
 
-  /** The Constant MOCK_SERVER_PORT. */
-  protected static final int MOCK_SERVER_PORT = 9898;
-  
-  /** The Constant MOCK_SERVER_URL. */
-  protected static final String MOCK_SERVER_URL = "http://localhost:" + MOCK_SERVER_PORT;
+  private static final Gson GSON = GsonSingleton.getGson();
 
-  /** The mock server. */
-  protected ClientAndServer mockServer;
+  /** The server. */
+  protected MockWebServer server;
 
   /**
    * Setups and starts the mock server.
@@ -64,15 +55,39 @@ public abstract class WatsonServiceUnitTest extends WatsonServiceTest {
    */
   @Override
   public void setUp() throws Exception {
-    mockServer = startClientAndServer(MOCK_SERVER_PORT);
+    server = new MockWebServer();
+    server.start();
   }
 
   /**
-   * Stops the mock server.
+   * Tear down.
+   *
+   * @throws IOException Signals that an I/O exception has occurred.
    */
   @After
-  public void tearDown() {
-    mockServer.stop();
+  public void tearDown() throws IOException {
+    server.shutdown();
+  }
+
+  /**
+   * Gets the mock web server url.
+   *
+   * @return the server url
+   */
+  protected String getMockWebServerUrl() {
+    return StringUtils.chop(server.url("/").toString());
+  }
+
+  /**
+   * Create a MockResponse with JSON content type and the object serialized to JSON as body.
+   *
+   * @param body the body
+   * @return the mock response
+   */
+  protected static MockResponse jsonResponse(Object body) {
+    return new MockResponse()
+        .addHeader(CONTENT_TYPE, HttpMediaType.APPLICATION_JSON)
+        .setBody(GSON.toJson(body));
   }
 
 }

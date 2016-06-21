@@ -27,13 +27,15 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.apache.commons.lang3.StringUtils;
-
 /**
  * Utility class to manage Solr ZIP configuration files.
  */
-public class ZipUtils {
+public final class ZipUtils {
   private static final MessageFormatter MSGS = new MessageFormatter(bundleName());
+
+  private ZipUtils() {
+    // This is a utility class - no instantiation allowed.
+  }
 
   /**
    * Builds the configuration ZIP file.
@@ -63,11 +65,9 @@ public class ZipUtils {
       throw new RuntimeException(MSGS.format(ERROR_ZIPPING_1, parentDir.toString()), e);
     } finally {
       try {
-        if (out != null) {
-          out.close();
-        }
+        out.close();
       } catch (final IOException e) {
-        throw new RuntimeException(e);
+        // do nothing
       }
     }
   }
@@ -88,7 +88,15 @@ public class ZipUtils {
 
   private static void writeZipEntry(ZipOutputStream out, String name, byte[] data)
       throws IOException {
-    final ZipEntry entry = new ZipEntry(StringUtils.removeStart(name, "/"));
+    final String cleanedName;
+
+    if (name == null || name.isEmpty() || !name.startsWith("/")) {
+      cleanedName = name;
+    } else {
+      cleanedName = name.substring(1);
+    }
+
+    final ZipEntry entry = new ZipEntry(cleanedName);
     out.putNextEntry(entry);
     out.write(data, 0, data.length);
     out.closeEntry();

@@ -29,8 +29,6 @@ public class ServiceResponseException extends RuntimeException {
   /** The HTTP response. */
   private final Response response;
 
-  private final okhttp3.Response response3;
-
   /**
    * Instantiates a new Service Response Exception.
    * 
@@ -41,9 +39,7 @@ public class ServiceResponseException extends RuntimeException {
   public ServiceResponseException(int statusCode, String message, Response response) {
     super(message);
     this.statusCode = statusCode;
-    this.response3 = response;
-    //Have for testing. Will remove upon migration completion
-    this.response = null;
+    this.response = response;
   }
 
   /**
@@ -63,12 +59,4 @@ public class ServiceResponseException extends RuntimeException {
   public Response getResponse() {
     return response;
   }
-
-  /**
-   * Gets the response3.
-   *
-   * @return the response3
-   */
-  //Will update appropriately once migration is complete
-  public okhttp3.Response getResponse3() { return response3; }
 }

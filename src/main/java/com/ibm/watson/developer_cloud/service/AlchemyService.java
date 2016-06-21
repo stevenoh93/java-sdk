@@ -17,8 +17,6 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.commons.lang3.StringUtils;
-
 import com.google.gson.JsonObject;
 import com.ibm.watson.developer_cloud.http.HttpStatus;
 import com.ibm.watson.developer_cloud.http.ResponseConverter;
@@ -26,6 +24,8 @@ import com.ibm.watson.developer_cloud.service.exception.BadRequestException;
 import com.ibm.watson.developer_cloud.service.exception.ServiceResponseException;
 import com.ibm.watson.developer_cloud.service.exception.TooManyRequestsException;
 import com.ibm.watson.developer_cloud.service.exception.UnauthorizedException;
+import com.ibm.watson.developer_cloud.util.RequestUtils;
+import com.ibm.watson.developer_cloud.util.ResponseUtils;
 
 import okhttp3.HttpUrl;
 import okhttp3.Request.Builder;
@@ -44,8 +44,13 @@ public abstract class AlchemyService extends WatsonService {
   private static final String X_ALCHEMY_API_STATUS = "X-AlchemyAPI-Status";
   private static final Logger LOG = Logger.getLogger(AlchemyService.class.getName());
 
+  /** The Constant ENDPOINT. */
   protected final static String ENDPOINT = "https://gateway-a.watsonplatform.net/calls";
+  
+  /** The Constant JSONP. */
   protected static final String JSONP = "jsonp";
+  
+  /** The Constant OUTPUT_MODE. */
   protected static final String OUTPUT_MODE = "outputMode";
 
   /**
@@ -54,6 +59,15 @@ public abstract class AlchemyService extends WatsonService {
   public AlchemyService() {
     super(SERVICE_NAME);
     setEndPoint(ENDPOINT);
+  }
+
+  /**
+   * Instantiates a new alchemy service by apiKey.
+   * @param apiKey The API key
+   */
+  public AlchemyService(String apiKey) {
+    this();
+    setApiKey(apiKey);
   }
 
   /**
@@ -146,7 +160,7 @@ public abstract class AlchemyService extends WatsonService {
    * .
    * 
    * @param response the HTTP response
-   * @return the error message from the json object
+   * @return the error message from the json object, or null if none found
    */
   private JsonObject getErrorMessage(Response response) {
 
@@ -158,6 +172,10 @@ public abstract class AlchemyService extends WatsonService {
       final JsonObject error = new JsonObject();
       error.addProperty(MESSAGE_ERROR, errorMessage != null ? errorMessage : "Unknown error");
       error.addProperty(MESSAGE_CODE, code);
+      
+      // #242: Close the request body to prevent a connection leak
+      ResponseUtils.getString(response);
+      
       return error;
     }
     return null; // no error
@@ -177,7 +195,7 @@ public abstract class AlchemyService extends WatsonService {
     }
 
     if (params == null || i == acceptedFormats.length) {
-      throw new IllegalArgumentException(StringUtils.join(acceptedFormats, ",") + " should be specified");
+      throw new IllegalArgumentException(RequestUtils.join(acceptedFormats, ",") + " should be specified");
     }
     return acceptedFormats[i];
   }

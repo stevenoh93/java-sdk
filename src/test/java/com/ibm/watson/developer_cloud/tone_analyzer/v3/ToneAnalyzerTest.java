@@ -13,29 +13,31 @@
  */
 package com.ibm.watson.developer_cloud.tone_analyzer.v3;
 
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import java.io.FileNotFoundException;
+import java.io.IOException;
 
-import org.junit.Assert;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.gson.JsonObject;
 import com.ibm.watson.developer_cloud.WatsonServiceUnitTest;
 import com.ibm.watson.developer_cloud.http.HttpHeaders;
 import com.ibm.watson.developer_cloud.http.HttpMediaType;
-import com.ibm.watson.developer_cloud.tone_analyzer.v3_beta.ToneAnalyzer;
-import com.ibm.watson.developer_cloud.tone_analyzer.v3_beta.model.ToneAnalysis;
+import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.Tone;
+import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneAnalysis;
+import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneOptions;
+
+import okhttp3.mockwebserver.RecordedRequest;
 
 /**
  * Tone Analyzer unit test.
  */
 public class ToneAnalyzerTest extends WatsonServiceUnitTest {
-  
+
   private static final String VERSION_DATE = "version";
-  private static final String TEXT = "text";
   private static final String FIXTURE = "src/test/resources/tone_analyzer/tone.json";
   private final static String TONE_PATH = "/v3/tone";
 
@@ -51,42 +53,10 @@ public class ToneAnalyzerTest extends WatsonServiceUnitTest {
   @Before
   public void setUp() throws Exception {
     super.setUp();
-    service = new ToneAnalyzer(ToneAnalyzer.VERSION_DATE_2016_02_11);
+    service = new ToneAnalyzer(ToneAnalyzer.VERSION_DATE_2016_05_19);
     service.setApiKey("");
-    service.setEndPoint(MOCK_SERVER_URL);
+    service.setEndPoint(getMockWebServerUrl());
 
-  }
-
-  /**
-   * Test get tone.
-   *
-   * @throws FileNotFoundException the file not found exception
-   */
-  @Test
-  public void testGetTone() throws FileNotFoundException {
-    final String text = "I know the times are difficult! Our sales have been "
-        + "disappointing for the past three quarters for our data analytics "
-        + "product suite. We have a competitive data analytics product "
-        + "suite in the industry. But we need to do our job selling it! ";
-
-    ToneAnalysis response =
-        loadFixture(FIXTURE, ToneAnalysis.class);
-
-    final JsonObject contentJson = new JsonObject();
-    contentJson.addProperty(TEXT, text);
-
-    mockServer
-      .when(request()
-          .withMethod(POST)
-          .withPath(TONE_PATH)
-          .withQueryStringParameter(VERSION_DATE, ToneAnalyzer.VERSION_DATE_2016_02_11)
-          .withBody(contentJson.toString()))
-      .respond(response()
-          .withHeader(HttpHeaders.CONTENT_TYPE, HttpMediaType.APPLICATION_JSON)
-          .withBody(response.toString()));
-
-    // Call the service and compare the result
-    Assert.assertEquals(response, service.getTone(text).execute());
   }
 
   /**
@@ -94,7 +64,51 @@ public class ToneAnalyzerTest extends WatsonServiceUnitTest {
    */
   @Test(expected = IllegalArgumentException.class)
   public void testGetToneWithNull() {
-    service.getTone(null);
+    service.getTone(null, null);
   }
 
+
+  /**
+   * Test get tones.
+   *
+   * @throws InterruptedException the interrupted exception
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  @Test
+  public void testGetTones() throws InterruptedException, IOException {
+    String text = "I know the times are difficult! Our sales have been "
+        + "disappointing for the past three quarters for our data analytics "
+        + "product suite. We have a competitive data analytics product "
+        + "suite in the industry. But we need to do our job selling it! ";
+
+    ToneAnalysis mockResponse = loadFixture(FIXTURE, ToneAnalysis.class);
+    server.enqueue(jsonResponse(mockResponse));
+    server.enqueue(jsonResponse(mockResponse));
+    server.enqueue(jsonResponse(mockResponse));
+
+    // execute request
+    ToneAnalysis serviceResponse = service.getTone(text, null).execute();
+
+    // first request
+    RecordedRequest request = server.takeRequest();
+
+    String path = StringUtils.join(TONE_PATH, "?", VERSION_DATE, "=", ToneAnalyzer.VERSION_DATE_2016_05_19);
+    assertEquals(path, request.getPath());
+    assertNotNull(request.getHeader(HttpHeaders.AUTHORIZATION));
+    assertEquals(serviceResponse, mockResponse);
+    assertEquals(HttpMediaType.APPLICATION_JSON, request.getHeader(HttpHeaders.ACCEPT));
+
+    // second request
+    serviceResponse = service.getTone(text, new ToneOptions.Builder().html(true).build()).execute();
+    request = server.takeRequest();
+    assertEquals(path, request.getPath());
+    assertTrue(request.getHeader(HttpHeaders.CONTENT_TYPE).startsWith(HttpMediaType.TEXT_HTML));
+
+    // third request
+    ToneOptions options = new ToneOptions.Builder().html(true).addTone(Tone.EMOTION).addTone(Tone.LANGUAGE).addTone(Tone.SOCIAL).build();
+    serviceResponse = service.getTone(text, options).execute();
+    request = server.takeRequest();
+    path = path + "&tones=emotion,language,social";
+    assertEquals(path, request.getPath());
+  }
 }

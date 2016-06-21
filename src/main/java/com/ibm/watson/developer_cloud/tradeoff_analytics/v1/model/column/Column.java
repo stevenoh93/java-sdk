@@ -21,8 +21,7 @@ import com.ibm.watson.developer_cloud.tradeoff_analytics.v1.TradeoffAnalytics;
 import com.ibm.watson.developer_cloud.tradeoff_analytics.v1.util.ColumnTypeAdapter;
 
 /**
- * {@link TradeoffAnalytics} column
- * 
+ * {@link TradeoffAnalytics} column.
  */
 @JsonAdapter(ColumnTypeAdapter.class)
 public abstract class Column extends GenericModel {
@@ -48,7 +47,7 @@ public abstract class Column extends GenericModel {
      * From string.
      * 
      * @param text the text
-     * @return the column type
+     * @return the column type, or null if none found
      */
     public static ColumnType fromString(String text) {
       if (text != null) {
@@ -80,7 +79,7 @@ public abstract class Column extends GenericModel {
      * @return true, if successful
      */
     public boolean equals(String otherColumnType) {
-      return otherColumnType != null && type.equals(otherColumnType);
+      return type.equals(otherColumnType);
     }
 
     /*
@@ -109,7 +108,7 @@ public abstract class Column extends GenericModel {
      * From string.
      * 
      * @param text the text
-     * @return the goal
+     * @return the goal, or null if none found
      */
     public static Goal fromString(String text) {
       if (text != null) {
@@ -141,7 +140,7 @@ public abstract class Column extends GenericModel {
      * @return true, if successful
      */
     public boolean equals(String otherGoal) {
-      return otherGoal != null && goal.equals(otherGoal);
+      return goal.equals(otherGoal);
     }
 
     /*

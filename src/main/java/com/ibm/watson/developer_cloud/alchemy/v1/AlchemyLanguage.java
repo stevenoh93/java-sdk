@@ -16,6 +16,7 @@ package com.ibm.watson.developer_cloud.alchemy.v1;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.ibm.watson.developer_cloud.alchemy.v1.model.AlchemyGenericModel;
@@ -36,6 +37,7 @@ import com.ibm.watson.developer_cloud.alchemy.v1.model.LanguageSelection;
 import com.ibm.watson.developer_cloud.alchemy.v1.model.Microformats;
 import com.ibm.watson.developer_cloud.alchemy.v1.model.SAORelations;
 import com.ibm.watson.developer_cloud.alchemy.v1.model.Taxonomies;
+import com.ibm.watson.developer_cloud.alchemy.v1.model.TypedRelations;
 import com.ibm.watson.developer_cloud.alchemy.v1.util.AlchemyEndPoints;
 import com.ibm.watson.developer_cloud.alchemy.v1.util.AlchemyEndPoints.AlchemyAPI;
 import com.ibm.watson.developer_cloud.http.RequestBuilder;
@@ -148,6 +150,21 @@ public class AlchemyLanguage extends AlchemyService {
   private static final String LANGUAGE = "language";
 
   /**
+   * Instantiates a new alchemy data news service.
+   */
+  public AlchemyLanguage() {
+    super();
+  }
+
+  /**
+   * Instantiates a new alchemy language service by apiKey.
+   * @param apiKey the api key
+   */
+  public AlchemyLanguage(String apiKey) {
+    super(apiKey);
+  }
+
+  /**
    * Execute the request and return the POJO that represent the response.
    * 
    * @param <T> The POJO that represents the response object
@@ -157,28 +174,31 @@ public class AlchemyLanguage extends AlchemyService {
    * @param acceptedFormats the accepted input formats e.g. "html", "text"...
    * @return the POJO object that represent the response
    */
-  private <T extends AlchemyGenericModel> ServiceCall<T> createServiceCall(Map<String, Object> params,
+  private <T extends AlchemyGenericModel> ServiceCall<T> createServiceCall(final Map<String, Object> params,
       AlchemyAPI operation, Class<T> returnType, String... acceptedFormats) {
 
+    // clone params, to prevent errors if the user continues to use the provided Map, or it is immutable
+    final Map<String, Object> paramsCopy = new HashMap<String, Object>(params);
+
     // Get the input format and check for missing parameters
-    final String format = getInputFormat(params, acceptedFormats);
+    final String format = getInputFormat(paramsCopy, acceptedFormats);
 
     // Get the path that represent this operation based on the operation and format
     final String path = AlchemyEndPoints.getPath(operation, format);
 
     // Return json
-    params.put(OUTPUT_MODE, "json");
+    paramsCopy.put(OUTPUT_MODE, "json");
 
-    if (!params.containsKey(LANGUAGE) && language != LanguageSelection.DETECT) {
-      params.put(LANGUAGE, language.toString().toLowerCase());
+    if (!paramsCopy.containsKey(LANGUAGE) && language != LanguageSelection.DETECT) {
+      paramsCopy.put(LANGUAGE, language.toString().toLowerCase());
     }
 
     // Prevent jsonp to be returned
-    params.remove(JSONP);
+    paramsCopy.remove(JSONP);
 
     final RequestBuilder requestBuilder = RequestBuilder.post(path);
-    for (final String param : params.keySet()) {
-      requestBuilder.form(param, params.get(param));
+    for (final String param : paramsCopy.keySet()) {
+      requestBuilder.form(param, paramsCopy.get(param));
     }
     return createServiceCall(requestBuilder.build(),ResponseConverterUtils.getObject(returnType));
   }
@@ -367,21 +387,32 @@ public class AlchemyLanguage extends AlchemyService {
   }
 
   /**
+   * Finds entities and their relationships from a text, URL or HTML.
+   * 
+   * @param params The parameters to be used in the service call, text, html or url should be
+   *        specified
+   * @return {@link DocumentEmotion}
+   */
+  public ServiceCall<TypedRelations> getTypedRelations(Map<String, Object> params) {
+    return createServiceCall(params, AlchemyAPI.TYPED, TypedRelations.class, TEXT, HTML, URL);
+  }
+  
+  /**
    * Extracts dates for text, a URL or HTML.
    * 
    * @param params The parameters to be used in the service call, text, html or url should be
    *        specified.
    * @return {@link Dates}
    */
-  public ServiceCall<Dates> getDates(Map<String, Object> params) {
+  public ServiceCall<Dates> getDates(final Map<String, Object> params) {
+    // clone params, to prevent errors if the user continues to use the provided Map, or it is immutable
+    Map<String, Object> paramsCopy = new HashMap<String, Object>(params);
 
-    if (params != null && params.containsKey(ANCHOR_DATE)) {
-      if (params.get(ANCHOR_DATE) != null && params.get(ANCHOR_DATE) instanceof Date) {
-        String anchorDate = anchorDateFormat.format(params.get(ANCHOR_DATE));
-        params.put(ANCHOR_DATE, anchorDate);
-      }
+    if (params.containsKey(ANCHOR_DATE) && params.get(ANCHOR_DATE) instanceof Date) {
+      String anchorDate = anchorDateFormat.format(params.get(ANCHOR_DATE));
+      paramsCopy.put(ANCHOR_DATE, anchorDate);
     }
 
-    return createServiceCall(params, AlchemyAPI.DATES, Dates.class, TEXT, HTML, URL);
+    return createServiceCall(paramsCopy, AlchemyAPI.DATES, Dates.class, TEXT, HTML, URL);
   }
 }

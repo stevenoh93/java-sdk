@@ -27,7 +27,11 @@ import okhttp3.Response;
  *
  * @see ResponseConverter
  */
-public class ResponseConverterUtils {
+public final class ResponseConverterUtils {
+
+  private ResponseConverterUtils() {
+    // This is a utility class - no instantiation allowed.
+  }
 
   /**
    * Creates a generic {@link ResponseConverter} for a generic class.
@@ -69,7 +73,7 @@ public class ResponseConverterUtils {
    * @param type the type
    * @return the response converter
    */
-  public static <T extends GenericModel> ResponseConverter<T> getObject(final Class<T> type) {
+  public static <T extends GenericModel> ResponseConverter<T> getObject(final Class<? extends T> type) {
     return new ResponseConverter<T>() {
       @Override
       public T convert(Response response) {
@@ -101,6 +105,7 @@ public class ResponseConverterUtils {
     return new ResponseConverter<Void>() {
       @Override
       public Void convert(Response response) {
+        ResponseUtils.getString(response); // read the response to prevent a connection leak
         return null;
       }
     };

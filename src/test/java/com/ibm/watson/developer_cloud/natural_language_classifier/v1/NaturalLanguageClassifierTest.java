@@ -14,8 +14,6 @@
 package com.ibm.watson.developer_cloud.natural_language_classifier.v1;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockserver.model.HttpRequest.request;
-import static org.mockserver.model.HttpResponse.response;
 
 import java.io.File;
 
@@ -27,7 +25,8 @@ import com.ibm.watson.developer_cloud.WatsonServiceUnitTest;
 import com.ibm.watson.developer_cloud.natural_language_classifier.v1.model.Classification;
 import com.ibm.watson.developer_cloud.natural_language_classifier.v1.model.Classifier;
 import com.ibm.watson.developer_cloud.natural_language_classifier.v1.model.Classifiers;
-import com.ibm.watson.developer_cloud.util.GsonSingleton;
+
+import okhttp3.mockwebserver.RecordedRequest;
 
 /**
  * The Class NaturalLanguageClassifierTest.
@@ -56,7 +55,7 @@ public class NaturalLanguageClassifierTest extends WatsonServiceUnitTest {
     super.setUp();
     service = new NaturalLanguageClassifier();
     service.setApiKey("");
-    service.setEndPoint(MOCK_SERVER_URL);
+    service.setEndPoint(getMockWebServerUrl());
 
     classifierId = "foo";
     classifiers = loadFixture(RESOURCE + "classifiers.json", Classifiers.class);
@@ -66,50 +65,53 @@ public class NaturalLanguageClassifierTest extends WatsonServiceUnitTest {
 
   /**
    * Test classify.
+   *
+   * @throws InterruptedException the interrupted exception
    */
   @Test
-  public void testClassify() {
-    JsonObject contentJson = new JsonObject();
+  public void testClassify() throws InterruptedException {
+    final JsonObject contentJson = new JsonObject();
     contentJson.addProperty(TEXT, classification.getText());
 
-    String path = String.format(CLASSIFY_PATH, classifierId);
+    final String path = String.format(CLASSIFY_PATH, classifierId);
 
-    mockServer.when(request().withMethod(POST).withPath(path).withBody(contentJson.toString()))
-        .respond(
-            response().withHeader(APPLICATION_JSON).withBody(
-                GsonSingleton.getGsonWithoutPrettyPrinting().toJson(classification)));
+    server.enqueue(jsonResponse(classification));
+    final Classification result = service.classify(classifierId, classification.getText()).execute();
+    final RecordedRequest request = server.takeRequest();
 
-    Classification result = service.classify(classifierId, classification.getText()).execute();
-
+    assertEquals(path, request.getPath());
+    assertEquals("POST", request.getMethod());
+    assertEquals(contentJson.toString(), request.getBody().readUtf8());
     assertEquals(classification, result);
   }
 
   /**
    * Test get classifier.
+   *
+   * @throws InterruptedException the interrupted exception
    */
   @Test
-  public void testGetClassifier() {
-    mockServer.when(request().withPath(CLASSIFIERS_PATH + "/" + classifierId)).respond(
-        response().withHeader(APPLICATION_JSON)
-            .withBody(GsonSingleton.getGsonWithoutPrettyPrinting().toJson(classifier)));
+  public void testGetClassifier() throws InterruptedException {
+    server.enqueue(jsonResponse(classifier));
+    final Classifier response = service.getClassifier(classifierId).execute();
+    final RecordedRequest request = server.takeRequest();
 
-    Classifier response = service.getClassifier(classifierId).execute();
+    assertEquals(CLASSIFIERS_PATH + "/" + classifierId, request.getPath());
     assertEquals(classifier, response);
-
   }
 
   /**
    * Test get classifiers.
+   *
+   * @throws InterruptedException the interrupted exception
    */
   @Test
-  public void testGetClassifiers() {
-    mockServer.when(request().withPath(CLASSIFIERS_PATH)).respond(
-        response().withHeader(APPLICATION_JSON).withBody(
-            GsonSingleton.getGsonWithoutPrettyPrinting().toJson(classifiers)));
+  public void testGetClassifiers() throws InterruptedException {
+    server.enqueue(jsonResponse(classifiers));
+    final Classifiers response = service.getClassifiers().execute();
+    final RecordedRequest request = server.takeRequest();
 
-
-    Classifiers response = service.getClassifiers().execute();
-
+    assertEquals(CLASSIFIERS_PATH, request.getPath());
     assertEquals(classifiers, response);
   }
 

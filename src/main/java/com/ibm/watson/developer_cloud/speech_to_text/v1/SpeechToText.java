@@ -16,6 +16,7 @@ package com.ibm.watson.developer_cloud.speech_to_text.v1;
 import java.io.File;
 import java.io.InputStream;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.List;
 
 import com.google.gson.reflect.TypeToken;
@@ -24,6 +25,7 @@ import com.ibm.watson.developer_cloud.http.ResponseConverter;
 import com.ibm.watson.developer_cloud.http.ServiceCall;
 import com.ibm.watson.developer_cloud.http.ServiceCallback;
 import com.ibm.watson.developer_cloud.service.WatsonService;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.model.RecognizeOptions;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechModel;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechResults;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechSession;
@@ -31,11 +33,13 @@ import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechSessionStatu
 import com.ibm.watson.developer_cloud.speech_to_text.v1.util.MediaTypeUtils;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.RecognizeCallback;
 import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.WebSocketManager;
-import com.ibm.watson.developer_cloud.util.GsonSingleton;
+import com.ibm.watson.developer_cloud.util.RequestUtils;
 import com.ibm.watson.developer_cloud.util.ResponseConverterUtils;
 import com.ibm.watson.developer_cloud.util.Validator;
 
+import okhttp3.MediaType;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.ws.WebSocket;
 
 /**
@@ -67,9 +71,11 @@ public class SpeechToText extends WatsonService {
   private static final String URL = "https://stream.watsonplatform.net/speech-to-text/api";
   private static final String WORD_ALTERNATIVES_THRESHOLD = "word_alternatives_threshold";
   private static final String WORD_CONFIDENCE = "word_confidence";
-
+  private static final String PROFANITY_FILTER = "profanity_filter";
+  
   private static final Type TYPE_LIST_MODELS = new TypeToken<List<SpeechModel>>() {}.getType();
   private static final Type TYPE_SESSION_STATUS = new TypeToken<SpeechSessionStatus>() {}.getType();
+  
 
   /**
    * Instantiates a new Speech to Text service.
@@ -77,6 +83,16 @@ public class SpeechToText extends WatsonService {
   public SpeechToText() {
     super(SERVICE_NAME);
     setEndPoint(URL);
+  }
+
+  /**
+   * Instantiates a new Speech to Text service by username and password.
+   * @param username the username
+   * @param password the password
+   */
+  public SpeechToText(String username, String password) {
+    this();
+    setUsernameAndPassword(username, password);
   }
 
   /**
@@ -95,6 +111,9 @@ public class SpeechToText extends WatsonService {
     if (options.continuous() != null)
       requestBuilder.query(CONTINUOUS, options.continuous());
 
+    if (options.profanityFilter() != null)
+      requestBuilder.query(PROFANITY_FILTER, options.profanityFilter());
+
     if (options.maxAlternatives() != null)
       requestBuilder.query(MAX_ALTERNATIVES, options.maxAlternatives());
 
@@ -110,8 +129,10 @@ public class SpeechToText extends WatsonService {
     if (options.keywordsThreshold() != null)
       requestBuilder.query(KEYWORDS_THRESHOLD, options.keywordsThreshold());
 
-    if (options.keywords() != null && options.keywords().length > 0)
-      requestBuilder.query(KEYWORDS, GsonSingleton.getGsonWithoutPrettyPrinting().toJson(options.keywords()));
+    if (options.keywords() != null && options.keywords().length > 0) {
+      final String keywords = RequestUtils.join(Arrays.asList(options.keywords()), ",");
+      requestBuilder.query(KEYWORDS, RequestUtils.encode(keywords));
+    }
 
     if (options.wordAlternativesThreshold() != null)
       requestBuilder.query(WORD_ALTERNATIVES_THRESHOLD, options.wordAlternativesThreshold());
@@ -163,7 +184,7 @@ public class SpeechToText extends WatsonService {
   }
 
   /**
-   * Deletes a {@link SpeechSession}
+   * Deletes a {@link SpeechSession}.
    *
    * @param session the speech session to delete
    * @return the service call
@@ -275,12 +296,12 @@ public class SpeechToText extends WatsonService {
     Validator.notNull(contentType, "The audio format cannot be recognized");
 
     String path = PATH_RECOGNIZE;
-    if (options != null && (options.sessionId() != null && !options.sessionId().isEmpty()))
+    if (options != null && options.sessionId() != null && !options.sessionId().isEmpty())
       path = String.format(PATH_SESSION_RECOGNIZE, options.sessionId());
 
     final RequestBuilder requestBuilder = RequestBuilder.post(path);
     buildRecognizeRequest(requestBuilder, options);
-    requestBuilder.body(okhttp3.RequestBody.create(okhttp3.MediaType.parse(contentType), audio));
+    requestBuilder.body(RequestBody.create(MediaType.parse(contentType), audio));
     return createServiceCall(requestBuilder.build(), ResponseConverterUtils.getObject(SpeechResults.class));
   }
 
@@ -324,7 +345,7 @@ public class SpeechToText extends WatsonService {
     getToken().enqueue(new ServiceCallback<String>() {
       @Override
       public void onFailure(Exception e) {
-        throw new RuntimeException(e);
+        callback.onError(e);
       }
 
       @Override

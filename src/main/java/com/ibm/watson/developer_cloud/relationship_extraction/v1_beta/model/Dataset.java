@@ -13,22 +13,18 @@
  */
 package com.ibm.watson.developer_cloud.relationship_extraction.v1_beta.model;
 
-import javax.management.relation.RelationException;
-
 import com.ibm.watson.developer_cloud.service.model.GenericModel;
 
 /**
- * Dataset to be use in the {@link RelationException} service.
+ * Dataset to be use in the
+ * {@link com.ibm.watson.developer_cloud.relationship_extraction.v1_beta.RelationshipExtraction} service.
  */
 public class Dataset extends GenericModel {
 
-  /**
-   * English News
-   */
+  /** English News. */
   public static final Dataset ENGLISH_NEWS = new Dataset("ie-en-news");
-  /**
-   * Spanish news
-   */
+  
+  /** Spanish news. */
   public static final Dataset SPANISH_NEWS = new Dataset("ie-es-news");
 
 

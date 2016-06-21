@@ -84,6 +84,16 @@ public class RetrieveAndRank extends WatsonService implements ClusterLifecycleMa
   }
 
   /**
+   * Instantiates a new ranker service by username and password.
+   * @param username the username
+   * @param password the password
+   */
+  public RetrieveAndRank(String username, String password) {
+    this();
+    setUsernameAndPassword(username, password);
+  }
+
+  /**
    * Creates the Solr configuration path.
    * 
    * @param solrClusterId the solr cluster id
@@ -285,7 +295,7 @@ public class RetrieveAndRank extends WatsonService implements ClusterLifecycleMa
   }
 
   /**
-   * Gathers memory and disk usage stats from a Solr cluster
+   * Gathers memory and disk usage stats from a Solr cluster.
    *
    * @param solrClusterId the ID of the Solr cluster to gather stats from
    * @return stats about the Solr cluster

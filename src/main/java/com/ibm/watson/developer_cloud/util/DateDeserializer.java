@@ -16,7 +16,9 @@ package com.ibm.watson.developer_cloud.util;
 import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,13 +33,17 @@ import com.google.gson.JsonParseException;
 public class DateDeserializer implements JsonDeserializer<Date> {
   private static final String DATE_FROM_ALCHEMY = "yyyyMMdd'T'HHmmss";
   private static final String DATE_FROM_DIALOG = "yyyy-MM-dd HH:mm:ss";
-  private static final String DATE_UTC = "yyyy-MM-dd'T'HH:mm:ss.SSS";
+  protected static final String DATE_UTC = "yyyy-MM-dd'T'HH:mm:ss.SSS";
   private static final String DATE_WITHOUT_SECONDS = "yyyy-MM-dd'T'HH:mm:ssZ";
-  
-  private static final SimpleDateFormat ALCHEMY_DATE = new SimpleDateFormat(DATE_FROM_ALCHEMY);
-  private static final SimpleDateFormat DIALOG_DATE = new SimpleDateFormat(DATE_FROM_DIALOG);
-  private static final SimpleDateFormat UTC = new SimpleDateFormat(DATE_UTC);
-  private static final SimpleDateFormat UTC_WITHOUT_SECONDS = new SimpleDateFormat(DATE_WITHOUT_SECONDS);
+
+  // SimpleDateFormat is NOT thread safe - they require private visibility and synchronized access
+  private final SimpleDateFormat alchemyDateFormatter = new SimpleDateFormat(DATE_FROM_ALCHEMY);
+  private final SimpleDateFormat dialogDateFormatter = new SimpleDateFormat(DATE_FROM_DIALOG);
+  private final SimpleDateFormat utcDateFormatter = new SimpleDateFormat(DATE_UTC);
+  private final SimpleDateFormat utcWithoutSecondsDateFormatter = new SimpleDateFormat(DATE_WITHOUT_SECONDS);
+
+  private final List<SimpleDateFormat> FORMATS = Arrays.asList(
+    utcDateFormatter, utcWithoutSecondsDateFormatter, dialogDateFormatter, alchemyDateFormatter);
 
   private static final Logger LOG = Logger.getLogger(DateDeserializer.class.getName());
   
@@ -48,28 +54,26 @@ public class DateDeserializer implements JsonDeserializer<Date> {
    * java.lang.reflect.Type, com.google.gson.JsonDeserializationContext)
    */
   @Override
-  public Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
+  // DateSerializer.deserialize() is NOT thread safe because of the underlying SimpleDateFormats.
+  public synchronized Date deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
       throws JsonParseException {
 
-    String dateAsString = json.getAsJsonPrimitive().getAsString();
-    dateAsString = dateAsString.replaceAll("Z$", "+0000");
-    try {
-      return UTC.parse(dateAsString);
-    } catch (Exception e1) {
+    if(json.isJsonNull() || json.getAsString().isEmpty()) {
+      return null;
+    }
+
+    String dateAsString = json.getAsJsonPrimitive().getAsString().replaceAll("Z$", "+0000");
+    ParseException e = null;
+
+    for(SimpleDateFormat format : FORMATS) {
       try {
-        return UTC_WITHOUT_SECONDS.parse(dateAsString);
-      } catch (ParseException e2) {
-        try {
-          return DIALOG_DATE.parse(dateAsString);
-        } catch (ParseException e3) {
-          try {
-            return ALCHEMY_DATE.parse(dateAsString);
-          } catch (ParseException e4) {
-            LOG.log(Level.SEVERE, "Error parsing: " + dateAsString, e4);
-          }
-        }
+        return format.parse(dateAsString);
+      } catch (ParseException e1) {
+        e = e1;
       }
     }
+
+    LOG.log(Level.SEVERE, "Error parsing: " + dateAsString, e);
     return null;
   }
 

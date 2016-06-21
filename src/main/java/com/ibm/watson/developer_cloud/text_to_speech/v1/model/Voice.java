@@ -16,44 +16,67 @@ package com.ibm.watson.developer_cloud.text_to_speech.v1.model;
 import com.ibm.watson.developer_cloud.service.model.GenericModel;
 import com.ibm.watson.developer_cloud.text_to_speech.v1.TextToSpeech;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 /**
- * {@link TextToSpeech} voice
+ * {@link TextToSpeech} voice.
  */
 public class Voice extends GenericModel {
 
-  /** The Constant DE_DIETER (value is "de-DE_DieterVoice"). */
-  public static final Voice DE_DIETER = new Voice("de-DE_DieterVoice", "male", "de-DE");
+  private static final String MALE = "male";
 
-  /** The Constant DE_GIRGIT (value is "de-DE_BirgitVoice"). */
-  public static final Voice DE_GIRGIT = new Voice("de-DE_BirgitVoice", "female", "de-DE");
+  private static final String FEMALE = "female";
+
+  /** The Constant DE_DIETER (value is "de-DE_DieterVoice"). */
+  public static final Voice DE_DIETER = new Voice("de-DE_DieterVoice", MALE, "de-DE");
+
+  /** The Constant DE_BIRGIT (value is "de-DE_BirgitVoice"). */
+  public static final Voice DE_BIRGIT = new Voice("de-DE_BirgitVoice", FEMALE, "de-DE");
+
+  /** Deprecated. Use DE_BIRGIT instead. */
+  @Deprecated
+  public static final Voice DE_GIRGIT = DE_BIRGIT;
 
   /** The Constant EN_ALLISON (value is "en-US_AllisonVoice"). */
-  public static final Voice EN_ALLISON = new Voice("en-US_AllisonVoice", "female", "en-US");
+  public static final Voice EN_ALLISON = new Voice("en-US_AllisonVoice", FEMALE, "en-US");
 
   /** The Constant EN_LISA (value is "en-US_LisaVoice"). */
-  public static final Voice EN_LISA = new Voice("en-US_LisaVoice", "female", "en-US");
+  public static final Voice EN_LISA = new Voice("en-US_LisaVoice", FEMALE, "en-US");
 
   /** The Constant EN_MICHAEL (value is "en-US_MichaelVoice"). */
-  public static final Voice EN_MICHAEL = new Voice("en-US_MichaelVoice", "male", "en-US");
+  public static final Voice EN_MICHAEL = new Voice("en-US_MichaelVoice", MALE, "en-US");
 
   /** The Constant ES_ENRIQUE (value is "es-ES_EnriqueVoice"). */
-  public static final Voice ES_ENRIQUE = new Voice("es-ES_EnriqueVoice", "male", "es-ES");
+  public static final Voice ES_ENRIQUE = new Voice("es-ES_EnriqueVoice", MALE, "es-ES");
 
   /** The Constant ES_LAURA (value is "es-ES_LauraVoice"). */
-  public static final Voice ES_LAURA = new Voice("es-ES_LauraVoice", "female", "es-US");
+  public static final Voice ES_LAURA = new Voice("es-ES_LauraVoice", FEMALE, "es-US");
 
   /** The Constant ES_SOFIA (value is "es-US_SofiaVoice"). */
-  public static final Voice ES_SOFIA = new Voice("es-US_SofiaVoice", "female", "es-US");
+  public static final Voice ES_SOFIA = new Voice("es-US_SofiaVoice", FEMALE, "es-US");
 
   /** The Constant FR_RENEE (value is "fr-FR_ReneeVoice"). */
-  public static final Voice FR_RENEE = new Voice("fr-FR_ReneeVoice", "female", "fr-FR");
+  public static final Voice FR_RENEE = new Voice("fr-FR_ReneeVoice", FEMALE, "fr-FR");
 
   /** The Constant GB_KATE (value is "en-GB_KateVoice"). */
-  public static final Voice GB_KATE = new Voice("en-GB_KateVoice", "female", "en-GB");
+  public static final Voice GB_KATE = new Voice("en-GB_KateVoice", FEMALE, "en-GB");
 
   /** The Constant IT_FRANCESCA (value is "it-IT_FrancescaVoice"). */
-  public static final Voice IT_FRANCESCA = new Voice("it-IT_FrancescaVoice", "female", "it-IT");
+  public static final Voice IT_FRANCESCA = new Voice("it-IT_FrancescaVoice", FEMALE, "it-IT");
 
+  /** The Constant JA_EMI (value is "ja-JP_EmiVoice"). */
+  public static final Voice JA_EMI = new Voice("ja-JP_EmiVoice", FEMALE, "ja-JP");
+
+  /** The Constant PT_ISABELA (value is "pt-BR_IsabelaVoice"). */
+  public static final Voice PT_ISABELA = new Voice("pt-BR_IsabelaVoice", FEMALE, "pt-BR");
+
+  /**  The List of all predefined Voices. */
+  public static final List<Voice> ALL = Collections.unmodifiableList(Arrays.asList(
+      DE_DIETER, DE_BIRGIT, EN_ALLISON, EN_LISA, EN_MICHAEL, ES_ENRIQUE,
+      ES_LAURA, ES_SOFIA, FR_RENEE, GB_KATE, IT_FRANCESCA, JA_EMI, PT_ISABELA
+  ));
 
   private String description;
   private String gender;
@@ -167,5 +190,21 @@ public class Voice extends GenericModel {
    */
   public void setUrl(final String url) {
     this.url = url;
+  }
+
+  /**
+   * Gets the Voice by its name (e.g. en-US_AllisonVoice).
+   *
+   * @param name the Voice name
+   * @return the Voice, or null if no matching Voice was found
+   */
+  public static Voice getByName(String name) {
+    for (Voice voice : ALL) {
+      if (voice.getName().equals(name)) {
+        return voice;
+      }
+    }
+
+    return null;
   }
 }
